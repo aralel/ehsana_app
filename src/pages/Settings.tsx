@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Bell, Shield, TreePine, LogOut, ChevronRight, CheckCircle2,
@@ -45,6 +45,9 @@ export default function Settings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteText, setDeleteText]               = useState('');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
   const myMember = tree?.members.find(m => m.linkedUserId === user.id);
   const myDocs   = state.documents.filter(d => d.memberId === myMember?.id);
 
@@ -55,6 +58,27 @@ export default function Settings() {
     dispatch({ type: 'UPDATE_USER', name: name.trim(), email: email.trim() });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2000);
+  };
+
+  const handlePickAvatar = () => fileInputRef.current?.click();
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const avatar = typeof reader.result === 'string' ? reader.result : '';
+      if (avatar) dispatch({ type: 'UPDATE_USER_AVATAR', avatar });
+      setAvatarUploading(false);
+      // reset input so selecting the same file again still triggers change
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.onerror = () => {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveTreeName = () => {
@@ -111,9 +135,26 @@ export default function Settings() {
               alt=""
               className="w-16 h-16 rounded-full bg-slate-700"
             />
-            <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-slate-900">
-              <Edit3 className="w-2.5 h-2.5 text-white" />
-            </div>
+            <button
+              type="button"
+              onClick={handlePickAvatar}
+              className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-slate-900 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Change avatar"
+              disabled={avatarUploading}
+            >
+              {avatarUploading ? (
+                <div className="w-3 h-3 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Edit3 className="w-3 h-3 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
           <div>
             <p className="font-semibold text-white">{user.name}</p>

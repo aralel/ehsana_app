@@ -138,6 +138,7 @@ type Action =
   | { type: 'MERGE_TREE'; targetTreeId: string }
   | { type: 'LINK_MEMBER_USER'; memberId: string; userId: string }
   | { type: 'UPDATE_USER'; name: string; email: string }
+  | { type: 'UPDATE_USER_AVATAR'; avatar: string }
   | { type: 'UPDATE_TREE_NAME'; name: string }
   | { type: 'UPDATE_NOTIF_PREFS'; prefs: NotifPrefs }
   | { type: 'UPDATE_DEFAULT_VISIBILITY'; visibility: Visibility };
@@ -281,6 +282,19 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, currentUser: updated, users: updatedUsers, tree: updatedTree };
     }
 
+    case 'UPDATE_USER_AVATAR': {
+      if (!state.currentUser) return state;
+      const updated = { ...state.currentUser, avatar: action.avatar };
+      const updatedUsers = state.users.map(u => u.id === updated.id ? updated : u);
+      const updatedTree = state.tree ? {
+        ...state.tree,
+        members: state.tree.members.map(m =>
+          m.linkedUserId === updated.id ? { ...m, avatar: action.avatar } : m
+        )
+      } : state.tree;
+      return { ...state, currentUser: updated, users: updatedUsers, tree: updatedTree };
+    }
+
     case 'UPDATE_TREE_NAME': {
       if (!state.tree) return state;
       const updatedTree = { ...state.tree, name: action.name };
@@ -377,6 +391,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used inside AppProvider');
